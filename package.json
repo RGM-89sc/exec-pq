@@ -1,0 +1,25 @@
+{
+  "name": "exec-pq",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./lib/ExecPQ.js",
+  "typings": "./lib/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "commit": "cz"
+  },
+  "author": "",
+  "license": "MIT",
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "devDependencies": {
+    "cz-conventional-changelog": "^3.3.0",
+    "typescript": "^4.4.3"
+  },
+  "dependencies": {
+    "core-js": "^3.18.1"
+  }
+}
