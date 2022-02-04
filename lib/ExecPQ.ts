@@ -38,13 +38,16 @@ export default class ExecPQ {
   weightSet = new Set<number>()
 
   constructor() {
-    this.queue = []
+    if (!ExecPQ.instance) {
+      this.initInterval()
+      ExecPQ.instance = this
+    }
+    return ExecPQ.instance
   }
 
   static getInstance() {
     if (!this.instance) {
       this.instance = new ExecPQ()
-      this.instance.initInterval()
     }
     return this.instance
   }
@@ -120,7 +123,7 @@ export default class ExecPQ {
     }
   }
 
-  push({ handler, args = [], options = {} }: QueueItem) {
+  push({ handler, args = [], options = {} }: Required<Pick<QueueItem, 'handler'>> & Partial<Pick<QueueItem, 'args' | 'options' | 'resolve' | 'reject'>>) {
     options = Object.assign({}, queueItemDefaultOptions, options)
 
     return new Promise((resolve, reject) => {
