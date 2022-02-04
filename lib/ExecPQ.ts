@@ -1,6 +1,3 @@
-import 'core-js/features/set'
-import 'core-js/features/promise'
-
 interface Options {
   delay?: number,
   firstDelay?: number | null
@@ -36,7 +33,7 @@ export default class ExecPQ {
   static instance: ExecPQ
   queue: QueueItem[] = []
   options: Options = ({ ...defaultOptions })
-  timer: number | null = null
+  timer: ReturnType<typeof setTimeout> | null = null
   flag: TimerFlag = false
   weightSet = new Set<number>()
 

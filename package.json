@@ -2,10 +2,19 @@
   "name": "exec-pq",
   "version": "0.1.0",
   "description": "",
-  "main": "./lib/ExecPQ.js",
+  "main": "./dist/ExecPQ.js",
+  "exports": {
+    "import": "./dist/ExecPQ.min.js",
+    "require": "./dist/ExecPQ.cjs"
+  },
   "typings": "./lib/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "rollup",
+    "rollup": "rollup -c",
+    "yalc-publish": "yalc publish",
     "commit": "cz"
   },
   "author": "",
@@ -16,10 +25,22 @@
     }
   },
   "devDependencies": {
+    "@babel/core": "^7.16.7",
+    "@babel/plugin-transform-runtime": "^7.16.7",
+    "@babel/preset-env": "^7.16.7",
+    "@rollup/plugin-babel": "^5.3.0",
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.1.2",
+    "@rollup/plugin-typescript": "^8.3.0",
+    "@typescript-eslint/eslint-plugin": "^5.8.1",
+    "@typescript-eslint/parser": "^5.8.1",
     "cz-conventional-changelog": "^3.3.0",
-    "typescript": "^4.4.3"
-  },
-  "dependencies": {
-    "core-js": "^3.18.1"
+    "eslint": "^8.6.0",
+    "rollup": "^2.62.0",
+    "rollup-plugin-delete": "^2.0.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "tslib": "*",
+    "typescript": "^4.5.4"
   }
 }
