@@ -5,7 +5,7 @@ type TimerFlag = boolean
 interface Config {
   delay?: number,
   firstDelay?: number,
-  log: Function
+  log: (logContent: string) => any
 }
 
 const defaultConfig = {
