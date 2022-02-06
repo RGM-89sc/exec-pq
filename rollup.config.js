@@ -7,28 +7,28 @@ import { babel } from '@rollup/plugin-babel'
 import del from 'rollup-plugin-delete'
 
 export default {
-  input: './lib/ExecPQ.ts',
+  input: './lib/exec-pq.ts',
   external: [
     /@babel\/runtime/
   ],
   output: [
     {
-      file: './dist/ExecPQ.js',
+      file: './dist/exec-pq.js',
       format: 'esm',
-      name: 'ExecPQ',
+      name: 'exec-pq',
     },
     {
-      file: './dist/ExecPQ.min.js',
+      file: './dist/exec-pq.min.js',
       format: 'esm',
-      name: 'ExecPQ',
+      name: 'exec-pq',
       sourcemap: true,
       plugins: [terser()]
     },
 
     {
-      file: './dist/ExecPQ.cjs',
+      file: './dist/exec-pq.cjs',
       format: 'cjs',
-      name: 'ExecPQ',
+      name: 'exec-pq',
     }
   ],
   plugins: [
@@ -36,7 +36,7 @@ export default {
     commonjs(),
     nodeResolve(),
     json(),
-    typescript(),
+    typescript({ tsconfig: './tsconfig.json' }),
     babel({ babelHelpers: 'runtime' })
   ]
 }

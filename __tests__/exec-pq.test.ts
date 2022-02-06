@@ -1,4 +1,4 @@
-import { ExecPQ, Task } from '../lib/ExecPQ'
+import { ExecPQ, Task } from '../lib/exec-pq'
 
 describe('PQ为单例模式', () => {
   test('正确的静态属性instance', () => {
@@ -66,7 +66,7 @@ describe('PQ配置设置', () => {
       delay: 500,
       firstDelay: 1000
     })
-    expect(instance.getConfig()).toEqual({
+    expect(instance.getConfig()).toMatchObject({
       delay: 500,
       firstDelay: 1000
     })

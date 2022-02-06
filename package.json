@@ -2,12 +2,12 @@
   "name": "exec-pq",
   "version": "0.1.0",
   "description": "",
-  "main": "./dist/ExecPQ.js",
+  "main": "./dist/exec-pq.js",
   "exports": {
-    "import": "./dist/ExecPQ.min.js",
-    "require": "./dist/ExecPQ.cjs"
+    "import": "./dist/exec-pq.min.js",
+    "require": "./dist/exec-pq.cjs"
   },
-  "typings": "./lib/index.d.ts",
+  "typings": "./dist/exec-pq.d.ts",
   "files": [
     "dist"
   ],

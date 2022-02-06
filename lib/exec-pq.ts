@@ -4,43 +4,47 @@ type TimerFlag = boolean
 
 interface Config {
   delay?: number,
-  firstDelay?: number
+  firstDelay?: number,
+  log: Function
 }
 
 const defaultConfig = {
   delay: 0,
-  firstDelay: 0
+  firstDelay: 0,
+  log: console.log
 }
+const NAME = 'EXEC-PQ'
 
 class ExecPQ {
   static instance: ExecPQ
-  queueMap = new Map<QueueWeight, Task[]>()
+  #queueMap = new Map<QueueWeight, Task[]>()
   #config: Config = defaultConfig
   #timer: ReturnType<typeof setTimeout> | null = null
   #flag: TimerFlag = false
 
-  constructor(configOptions?: Config) {
+  constructor(configOptions?: Partial<Config>) {
     if (!ExecPQ.instance) {
       ExecPQ.instance = this
     }
-    this.setConfig(configOptions)
+    configOptions && this.setConfig(configOptions)
     return ExecPQ.instance
   }
 
-  static getInstance(configOptions?: Config) {
+  static getInstance(configOptions?: Partial<Config>) {
     if (!this.instance) {
       this.instance = new ExecPQ(configOptions)
     } else {
-      this.instance.setConfig(configOptions)
+      configOptions && this.instance.setConfig(configOptions)
     }
     return this.instance
   }
 
-  setConfig(configOptions?: Config) {
+  setConfig(configOptions?: Partial<Config>) {
     if (configOptions) {
       this.#config = {
         delay: configOptions.delay || defaultConfig.delay,
-        firstDelay: configOptions.firstDelay || defaultConfig.firstDelay
+        firstDelay: configOptions.firstDelay || defaultConfig.firstDelay,
+        log: configOptions.log || console.log
       }
     }
     this.stop()
@@ -52,10 +56,14 @@ class ExecPQ {
   }
 
   isAllQueueClear() {
-    return ![...this.queueMap.values()].some(queue => queue.length)
+    return ![...this.#queueMap.values()].some(queue => queue.length)
   }
 
   #initInterval() {
+    if (this.#flag) {
+      return
+    }
+
     this.#flag = true
     if (this.isAllQueueClear()) {
       this.stop()
@@ -76,10 +84,10 @@ class ExecPQ {
   }
 
   getNextOperateQueue(): Task[] | null {
-    const queueWeightList: QueueWeight[] = [...this.queueMap.keys()].sort((weight1, weight2) => weight2 - weight1)
+    const queueWeightList: QueueWeight[] = [...this.#queueMap.keys()].sort((weight1, weight2) => weight2 - weight1)
     let targetQueue = null
     queueWeightList.some((weight: QueueWeight) => {
-      const tempQueue = this.queueMap.get(weight)
+      const tempQueue = this.#queueMap.get(weight)
       if (tempQueue && tempQueue.length) {
         targetQueue = tempQueue
         return true
@@ -97,6 +105,7 @@ class ExecPQ {
 
     const currentQueue = this.getNextOperateQueue()
     if (currentQueue && currentQueue.length) {
+      this.#config.log(`[${NAME}]start to exec task when ${new Date().getTime()}`)
       const task = currentQueue.shift()
       task && task.exec()
     } else {
@@ -108,6 +117,7 @@ class ExecPQ {
     this.#timer && clearInterval(this.#timer)
     this.#timer = null
     this.#flag = false
+    this.#config.log(`[${NAME}]queues are empty`)
   }
 
   queue(taskList: Task[] | Task, weight: QueueWeight = 0) {
@@ -119,11 +129,11 @@ class ExecPQ {
       taskList = [taskList]
     }
 
-    const queue = this.queueMap.get(weight)
+    const queue = this.#queueMap.get(weight)
     if (queue && queue.length) {
       queue.push(...taskList)
     } else {
-      this.queueMap.set(weight, taskList)
+      this.#queueMap.set(weight, taskList)
     }
 
     if (!this.#timer && !this.#flag) {
