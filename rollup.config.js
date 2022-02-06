@@ -16,13 +16,11 @@ export default {
       file: './dist/ExecPQ.js',
       format: 'esm',
       name: 'ExecPQ',
-      exports: 'default'
     },
     {
       file: './dist/ExecPQ.min.js',
       format: 'esm',
       name: 'ExecPQ',
-      exports: 'default',
       sourcemap: true,
       plugins: [terser()]
     },
@@ -31,7 +29,6 @@ export default {
       file: './dist/ExecPQ.cjs',
       format: 'cjs',
       name: 'ExecPQ',
-      exports: 'default'
     }
   ],
   plugins: [

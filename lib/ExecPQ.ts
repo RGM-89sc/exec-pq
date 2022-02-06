@@ -1,155 +1,212 @@
-interface Options {
-  delay?: number,
-  firstDelay?: number | null
-}
-
-interface QueueItemOptions {
-  weight?: number
-  offsetDelay?: number | null
-}
-
-interface QueueItem {
-  handler: (...args: any[]) => any
-  args: QueueItemOptions[]
-  options: QueueItemOptions
-  resolve: (value: unknown) => void
-  reject: (reason?: any) => void
-}
+type QueueWeight = number
 
 type TimerFlag = boolean
 
-const defaultOptions: Options = {
-  delay: 500,  // 从第二次开始出队开始，每次出队操作的时间间隔
-  firstDelay: null,  // 第一次出队的延时，当值为null时不会进入下一轮事件循环
+interface Config {
+  delay?: number,
+  firstDelay?: number
 }
 
-const queueItemDefaultOptions: QueueItemOptions = {
-  weight: 0,  // 权重，在整理队列后值越大越先出队
-  offsetDelay: null  // 额外的延时，当值为null时不会进入下一轮事件循环
+const defaultConfig = {
+  delay: 0,
+  firstDelay: 0
 }
 
-
-export default class ExecPQ {
+class ExecPQ {
   static instance: ExecPQ
-  queue: QueueItem[] = []
-  options: Options = ({ ...defaultOptions })
-  timer: ReturnType<typeof setTimeout> | null = null
-  flag: TimerFlag = false
-  weightSet = new Set<number>()
+  queueMap = new Map<QueueWeight, Task[]>()
+  #config: Config = defaultConfig
+  #timer: ReturnType<typeof setTimeout> | null = null
+  #flag: TimerFlag = false
 
-  constructor() {
+  constructor(configOptions?: Config) {
     if (!ExecPQ.instance) {
-      this.initInterval()
       ExecPQ.instance = this
     }
+    this.setConfig(configOptions)
     return ExecPQ.instance
   }
 
-  static getInstance() {
+  static getInstance(configOptions?: Config) {
     if (!this.instance) {
-      this.instance = new ExecPQ()
+      this.instance = new ExecPQ(configOptions)
+    } else {
+      this.instance.setConfig(configOptions)
     }
     return this.instance
   }
 
-  config(options: Options = {}) {
-    this.options = Object.assign({}, defaultOptions, options)
+  setConfig(configOptions?: Config) {
+    if (configOptions) {
+      this.#config = {
+        delay: configOptions.delay || defaultConfig.delay,
+        firstDelay: configOptions.firstDelay || defaultConfig.firstDelay
+      }
+    }
+    this.stop()
+    this.#initInterval()
   }
 
-  initInterval() {
-    this.flag = true
-    if (!this.queue.length) {
-      this.resetTimerAndFlag()
+  getConfig() {
+    return { ...this.#config }
+  }
+
+  isAllQueueClear() {
+    return ![...this.queueMap.values()].some(queue => queue.length)
+  }
+
+  #initInterval() {
+    this.#flag = true
+    if (this.isAllQueueClear()) {
+      this.stop()
       return
     }
 
-    if (typeof this.options.firstDelay === 'number') {
-      setTimeout(() => {
-        this.beforeDequeue()
-      }, this.options.firstDelay)
-    } else {
-      this.beforeDequeue()
-    }
+    setTimeout(() => {
+      this.#dequeue()
+      this.#timer = setInterval(() => {
+        if (this.isAllQueueClear()) {
+          this.stop()
+          return
+        }
+
+        this.#dequeue()
+      }, this.#config.delay)
+    }, this.#config.firstDelay)
   }
 
-  beforeDequeue() {
-    console.log('[ExecPQ] out queue start ' + new Date().getTime())
-    this.dequeue()
-
-    this.timer = setInterval(() => {
-      if (!this.queue.length) {
-        this.resetTimerAndFlag()
-        console.log('[ExecPQ] out queue end ' + new Date().getTime())
-        return
+  getNextOperateQueue(): Task[] | null {
+    const queueWeightList: QueueWeight[] = [...this.queueMap.keys()].sort((weight1, weight2) => weight2 - weight1)
+    let targetQueue = null
+    queueWeightList.some((weight: QueueWeight) => {
+      const tempQueue = this.queueMap.get(weight)
+      if (tempQueue && tempQueue.length) {
+        targetQueue = tempQueue
+        return true
       }
-
-      this.dequeue()
-    }, this.options.delay)
+      return false
+    })
+    return targetQueue
   }
 
-  dequeue() {
-    if (!this.queue.length) {
-      this.resetTimerAndFlag()
+  #dequeue() {
+    if (this.isAllQueueClear()) {
+      this.stop()
       return
     }
-    
-    const item = this.queue.shift() as QueueItem
-    if (typeof item.options.offsetDelay === 'number') {
-      setTimeout(() => {
-        this.exec(item)
-      }, item.options.offsetDelay)
+
+    const currentQueue = this.getNextOperateQueue()
+    if (currentQueue && currentQueue.length) {
+      const task = currentQueue.shift()
+      task && task.exec()
     } else {
-      this.exec(item)
+      this.stop()
     }
   }
 
-  resetTimerAndFlag() {
-    this.timer && clearInterval(this.timer)
-    this.timer = null
-    this.flag = false
+  stop() {
+    this.#timer && clearInterval(this.#timer)
+    this.#timer = null
+    this.#flag = false
   }
 
-  exec(item: QueueItem) {
-    if (item.handler instanceof Promise) {
-      item.handler(...item.args)
-        .then(item.resolve)
-        .catch(item.reject)
+  queue(taskList: Task[] | Task, weight: QueueWeight = 0) {
+    if (Array.isArray(taskList) ? taskList.some(task => !(task instanceof Task)) : !(taskList instanceof Task)) {
+      throw 'the first argument should be the Task or task List'
+    }
+
+    if (!Array.isArray(taskList)) {
+      taskList = [taskList]
+    }
+
+    const queue = this.queueMap.get(weight)
+    if (queue && queue.length) {
+      queue.push(...taskList)
     } else {
-      try {
-        item.resolve(item.handler(...item.args))
-      } catch (e) {
-        item.reject(e)
+      this.queueMap.set(weight, taskList)
+    }
+
+    if (!this.#timer && !this.#flag) {
+      this.#initInterval()
+    }
+  }
+}
+
+
+
+interface TaskHandler {
+  (...args: any[]): any
+}
+
+type TaskHandlerArgs = any[] | ((...rest: any[]) => any[])
+
+interface TaskEmitterHandler<TaskEmitterCarrier> {
+  success: TaskEmitterCarrier extends Promise<any> ? (value?: any | PromiseLike<any>) => void : Function
+  fail: TaskEmitterCarrier extends Promise<any> ? (reason?: any) => void : Function
+}
+
+interface TaskEmitter {
+  success: TaskEmitterHandler<Promise<any>>['success']
+  fail: TaskEmitterHandler<Promise<any>>['fail']
+}
+
+class Task {
+  handler: TaskHandler
+  args: TaskHandlerArgs
+  #emitter: TaskEmitter | undefined
+
+  constructor(handler: TaskHandler, args?: TaskHandlerArgs) {
+    this.handler = handler
+    this.args = args || []
+  }
+
+  getArgs(): any[] {
+    if (typeof this.args === 'function') {
+      return this.args() || []
+    } else {
+      return this.args
+    }
+  }
+
+  exec() {
+    const successHandler = this.#emitter?.success
+    const failHandler = this.#emitter?.fail
+    const successHandlerCallable = typeof successHandler === 'function'
+    const failHandlerCallable = typeof failHandler === 'function'
+
+    try {
+      const result = this.handler(...this.getArgs())
+      if (result instanceof Promise) {
+        result.then(successHandlerCallable ? successHandler : () => {})
+          .catch(failHandlerCallable ? failHandler : (err) => {
+            throw err
+          })
+      } else {
+        successHandlerCallable && successHandler(result)
       }
+    } catch(err) {
+      failHandlerCallable && failHandler(err)
     }
   }
 
-  push({ handler, args = [], options = {} }: Required<Pick<QueueItem, 'handler'>> & Partial<Pick<QueueItem, 'args' | 'options' | 'resolve' | 'reject'>>) {
-    options = Object.assign({}, queueItemDefaultOptions, options)
-
+  listen() {
     return new Promise((resolve, reject) => {
-      this.queue.push({
-        handler: handler,
-        args: args,
-        options: options,
-        resolve: resolve,
-        reject: reject
-      })
-
-      if (!this.weightSet.has(options.weight || 0)) {
-        this.weightSet.add(options.weight || 0)
-        this.sort()
-      }
-
-      if (!this.timer && !this.flag) {
-        this.initInterval()
+      this.#emitter = {
+        success: resolve,
+        fail: reject
       }
     })
   }
+}
 
-  sort() {
-    this.queue.sort((item1, item2) => {
-      const [weight1 = 0, weight2 = 0] = [item1.options.weight, item2.options.weight]
-      return weight2 - weight1
-    })
-  }
+
+
+export {
+  ExecPQ,
+  Task
+}
+
+export default {
+  ExecPQ,
+  Task
 }
