@@ -1,6 +1,6 @@
 {
   "name": "exec-pq",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "main": "./dist/exec-pq.js",
   "exports": {
@@ -25,6 +25,14 @@
       "path": "./node_modules/cz-conventional-changelog"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RGM-89sc/exec-pq.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RGM-89sc/exec-pq/issues"
+  },
+  "homepage": "https://github.com/RGM-89sc/exec-pq",
   "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/plugin-transform-runtime": "^7.16.7",
